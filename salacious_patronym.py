@@ -6,6 +6,7 @@ import logging
 import os
 import sys
 import sqlite3
+import urllib.request
 
 
 log = logging.getLogger(__name__)
@@ -22,20 +23,33 @@ def resolvepath(path):
 # Implementation functions
 
 
-def quote_unquote(string):
-    split = string.split(' ')
-    if len(string) < 1 or len(split):
-        raise Exception("u can't make joek without sum nput dude")
-    elif len(split) == 1:
-        return '"{}", lol'.format(string)
-    else:
-        return '{}\'s "{}"'.format(split[0], split[1:])
+class Quotify:
+
+    def __init__(self, pantheon):
+        self.pantheon = pantheon
+
+    @classmethod
+    def quotify(cls, string):
+        split = string.split(' ')
+        if len(string) < 1 or len(split) < 1:
+            raise Exception("u can't make joek without sum nput dude")
+        elif len(split) == 1:
+            return '"{}", lol'.format(string)
+        else:
+            return '{}\'s "{}"'.format(split[0], " ".join(split[1:]))
+
+    def randomname(self):
+        deity = self.pantheon.randomusa()
+        return self.quotify(deity['name'])
 
 
 class Pantheon:
 
+    tsvuri = "http://pantheon.media.mit.edu/about/datasets"
+
     def __init__(self, connection, tablename="pantheon"):
         self.connection = connection
+        self.connection.row_factory = sqlite3.Row
         self.tablename = tablename
 
     @property
@@ -47,10 +61,7 @@ class Pantheon:
         return bool(curse.fetchone())
 
     def loaddb(self, tsvpath):
-        """
-        Pantheon is loaded from the 'pantheon.tsv' file found here:
-        http://pantheon.media.mit.edu/about/datasets
-        """
+        """Load the database from the tsv"""
         curse = self.connection.cursor()
         with open(resolvepath(tsvpath), encoding='utf-8') as tsvfile:
             tsvreader = csv.reader(tsvfile, delimiter='\t')
@@ -71,6 +82,14 @@ class Pantheon:
                     curse.execute("INSERT INTO {} VALUES ({})".format(
                         self.tablename, ", ".join(quotedrow)))
         self.connection.commit()
+
+    def randomusa(self):
+        curse = self.connection.cursor()
+        curse.execute(
+            "SELECT * FROM {} WHERE countryCode='US' ORDER BY RANDOM() LIMIT 1".format(self.tablename))
+        result = curse.fetchone()
+        curse.close()
+        return result
 
 
 # Main handler
@@ -93,23 +112,35 @@ def main(*args, **kwargs):
     parser.add_argument(
         "-t", "--pantheontsv", default=os.path.join(scriptdir, 'pantheon.tsv'),
         help="Path to pantheon.tsv from http://pantheon.media.mit.edu/about/datasets")
+    parser.add_argument(
+        "string", nargs='?',
+        help="If provided, instead of getting a random name from the Pantheon, quotify the string")
     parsed = parser.parse_args()
 
     if parsed.debug:
         log.setLevel(logging.DEBUG)
     else:
         log.setLevel(logging.INFO)
-    parsed.pantheondb = resolvepath(parsed.pantheondb)
-    parsed.pantheontsv = resolvepath(parsed.pantheontsv)
 
-    if parsed.initialize == 'reinit' and os.path.exists(parsed.pantheondb):
-        os.unlink(parsed.pantheondb)
+    if parsed.string:
+        print(Quotify.quotify(parsed.string))
+    else:
+        parsed.pantheondb = resolvepath(parsed.pantheondb)
+        parsed.pantheontsv = resolvepath(parsed.pantheontsv)
 
-    connection = sqlite3.connect(parsed.pantheondb)
-    pantheon = Pantheon(connection)
+        if parsed.initialize == 'reinit' and os.path.exists(parsed.pantheondb):
+            os.unlink(parsed.pantheondb)
 
-    if parsed.initialize == 'reinit' or parsed.initialize == 'init':
-        pantheon.loaddb(parsed.pantheontsv)
+        connection = sqlite3.connect(parsed.pantheondb)
+        pantheon = Pantheon(connection)
+
+        if parsed.initialize == 'reinit' or parsed.initialize == 'init':
+            if not os.path.exists(parsed.pantheontsv):
+                urllib.request.urlretrieve(pantheon.tsvuri, parsed.pantheontsv)
+            pantheon.loaddb(parsed.pantheontsv)
+
+        qq = Quotify(pantheon)
+        print(qq.randomname())
 
 
 if __name__ == '__main__':
