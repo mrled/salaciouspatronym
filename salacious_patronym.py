@@ -42,18 +42,22 @@ class Quotify:
         else:
             output = '{}\'s "{}"'.format(split[0], " ".join(split[1:]))
         if sext:
-            idx = random.randint(0, len(cls.sextemoji) -1)
-            output += " {}".format(cls.sextemoji[idx])
+            output += " {}".format(cls.randomsextemoji())
         return output
 
-    def randomname(self):
+    @classmethod
+    def randomsextemoji(cls):
+        idx = random.randint(0, len(cls.sextemoji) -1)
+        return cls.sextemoji[idx]
+
+    def randomname(self, sext=False):
         suitable = False
         while not suitable:
             deity = self.pantheon.randomusa()
             splitname = deity['name'].split(' ')
             if len(splitname) == 2:
                 suitable = True
-        return self.quotify(deity['name'], sext=True)
+        return self.quotify(deity['name'], sext=sext)
 
 
 class Pantheon:
@@ -126,6 +130,9 @@ def main(*args, **kwargs):
         "-t", "--pantheontsv", default=os.path.join(scriptdir, 'pantheon.tsv'),
         help="Path to pantheon.tsv from http://pantheon.media.mit.edu/about/datasets")
     parser.add_argument(
+        "-s", "--sext", action='store_true',
+        help="Include a sexting emoji {}".format(Quotify.randomsextemoji()))
+    parser.add_argument(
         "string", nargs='?',
         help="If provided, instead of getting a random name from the Pantheon, quotify the string")
     parsed = parser.parse_args()
@@ -136,7 +143,7 @@ def main(*args, **kwargs):
         log.setLevel(logging.INFO)
 
     if parsed.string:
-        print(Quotify.quotify(parsed.string))
+        print(Quotify.quotify(parsed.string, sext=parsed.sext))
     else:
         parsed.pantheondb = resolvepath(parsed.pantheondb)
         parsed.pantheontsv = resolvepath(parsed.pantheontsv)
@@ -153,7 +160,7 @@ def main(*args, **kwargs):
             pantheon.loaddb(parsed.pantheontsv)
 
         qq = Quotify(pantheon)
-        print(qq.randomname())
+        print(qq.randomname(sext=parsed.sext))
 
 
 if __name__ == '__main__':
