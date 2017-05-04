@@ -4,6 +4,7 @@ import argparse
 import csv
 import logging
 import os
+import random
 import sys
 import sqlite3
 import urllib.request
@@ -25,22 +26,34 @@ def resolvepath(path):
 
 class Quotify:
 
+    sextemoji = ['🍆', '💦', '🍑', '😏']
+
     def __init__(self, pantheon):
         self.pantheon = pantheon
 
     @classmethod
-    def quotify(cls, string):
+    def quotify(cls, string, sext=False):
         split = string.split(' ')
+        output = ""
         if len(string) < 1 or len(split) < 1:
             raise Exception("u can't make joek without sum nput dude")
         elif len(split) == 1:
-            return '"{}", lol'.format(string)
+            output = '"{}", lol'.format(string)
         else:
-            return '{}\'s "{}"'.format(split[0], " ".join(split[1:]))
+            output = '{}\'s "{}"'.format(split[0], " ".join(split[1:]))
+        if sext:
+            idx = random.randint(0, len(cls.sextemoji) -1)
+            output += " {}".format(cls.sextemoji[idx])
+        return output
 
     def randomname(self):
-        deity = self.pantheon.randomusa()
-        return self.quotify(deity['name'])
+        suitable = False
+        while not suitable:
+            deity = self.pantheon.randomusa()
+            splitname = deity['name'].split(' ')
+            if len(splitname) == 2:
+                suitable = True
+        return self.quotify(deity['name'], sext=True)
 
 
 class Pantheon:
