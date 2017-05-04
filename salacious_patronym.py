@@ -26,7 +26,7 @@ def resolvepath(path):
 
 class Quotify:
 
-    sextemoji = ['🍆', '💦', '🍑', '😏']
+    sextemoji = ['🍆', '💦', '🍑', '😏', '🤤', '🙈', '👉👌', '🍌', '♋']
 
     def __init__(self, pantheon):
         self.pantheon = pantheon
