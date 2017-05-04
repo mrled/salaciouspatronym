@@ -40,7 +40,11 @@ class Quotify:
         elif len(split) == 1:
             output = '"{}", lol'.format(string)
         else:
-            output = '{}\'s "{}"'.format(split[0], " ".join(split[1:]))
+            fname = split[0]
+            possessive = "'s" if fname[-1] != 's' else "'"
+            lname = " ".join(split[1:])
+            output = '{}{} "{}"'.format(fname, possessive, lname)
+
         if sext:
             output += " {}".format(cls.randomsextemoji())
         return output
