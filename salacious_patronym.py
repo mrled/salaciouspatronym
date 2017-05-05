@@ -66,7 +66,7 @@ class Quotify:
 
 class Pantheon:
 
-    tsvuri = "http://pantheon.media.mit.edu/about/datasets"
+    tsvuri = "http://pantheon.media.mit.edu/pantheon.tsv"
 
     def __init__(self, connection, tablename="pantheon"):
         self.connection = connection
