@@ -2,6 +2,7 @@
 
 import argparse
 import csv
+import json
 import logging
 import os
 import random
@@ -32,7 +33,13 @@ class Quotify:
         self.pantheon = pantheon
 
     @classmethod
-    def quotify(cls, string, sext=False):
+    def quotify(cls, string, sext=False, afterNewline=""):
+        """Make a morally bankrupt joke from an input string
+        u see, the joke is that if you put something in quotes, it makes it sound dirty
+        string: The input string. Must have at least one space
+        sext: If if True, add a sext emoji like the eggplant
+        afterNewline: If passed, after making our morally bankrupt joke, append this argument as text
+        """
         split = string.split(' ')
         output = ""
         if len(string) < 1 or len(split) < 1:
@@ -47,6 +54,10 @@ class Quotify:
 
         if sext:
             output += " {}".format(cls.randomsextemoji())
+
+        if afterNewline:
+            output = "{}\n{}".format(output, afterNewline)
+
         return output
 
     @classmethod
@@ -61,7 +72,10 @@ class Quotify:
             splitname = deity['name'].split(' ')
             if len(splitname) == 2:
                 suitable = True
-        return self.quotify(deity['name'], sext=sext)
+        return self.quotify(
+            deity['name'],
+            sext=sext,
+            afterNewline=self.pantheon.geturl(deity['en_curid']))
 
 
 class Pantheon:
@@ -72,6 +86,17 @@ class Pantheon:
         self.connection = connection
         self.connection.row_factory = sqlite3.Row
         self.tablename = tablename
+
+    @classmethod
+    def geturl(cls, curid):
+        """Get the Wikipedia URL from the curid
+        - https://en.wikipedia.org/w/api.php?action=query&prop=info&pageids=[CURID]&inprop=url&format=json
+        - Could just do http://en.wikipedia.org/?curid=[CURID] however this won't redirect to a nice URL with the name
+        """
+        url = "https://en.wikipedia.org/w/api.php?action=query&prop=info&pageids={}&inprop=url&format=json".format(curid)
+        apiresponse = urllib.request.urlopen(url).read()
+        wikimd = json.loads(apiresponse.decode())
+        return wikimd['query']['pages'][str(curid)]['fullurl']
 
     @property
     def initialized(self):
@@ -120,21 +145,20 @@ def main(*args, **kwargs):
     parser = argparse.ArgumentParser(
         description="A template for writing a new Python3 command line tool")
     parser.add_argument(
-        "-d", action='store_true', dest='debug',
+        "-d", "--debug", action='store_true',
         help="Include debugging output")
     parser.add_argument(
         "-i", "--initialize",
         choices=['no', 'init', 'reinit'], default='no',
         help="Initialization mode: assume initialized, initialized if not already, or drop-then-initialize")
     parser.add_argument(
-        "-p", "--pantheondb",
-        default=os.path.join(scriptdir, "pantheon.sqlite"),
+        "--pantheondb", default=os.path.join(scriptdir, "pantheon.sqlite"),
         help="Path to sqlite database containing Pantheon data (created if nonexistent)")
     parser.add_argument(
-        "-t", "--pantheontsv", default=os.path.join(scriptdir, 'pantheon.tsv'),
+        "--pantheontsv", default=os.path.join(scriptdir, 'pantheon.tsv'),
         help="Path to pantheon.tsv from http://pantheon.media.mit.edu/about/datasets")
     parser.add_argument(
-        "-s", "--sext", action='store_true',
+        "--sext", action='store_true',
         help="Include a sexting emoji {}".format(Quotify.randomsextemoji()))
     parser.add_argument(
         "string", nargs='?',
@@ -147,7 +171,7 @@ def main(*args, **kwargs):
         log.setLevel(logging.INFO)
 
     if parsed.string:
-        print(Quotify.quotify(parsed.string, sext=parsed.sext))
+        joek = Quotify.quotify(parsed.string, sext=parsed.sext)
     else:
         parsed.pantheondb = resolvepath(parsed.pantheondb)
         parsed.pantheontsv = resolvepath(parsed.pantheontsv)
@@ -164,7 +188,9 @@ def main(*args, **kwargs):
             pantheon.loaddb(parsed.pantheontsv)
 
         qq = Quotify(pantheon)
-        print(qq.randomname(sext=parsed.sext))
+        joek = qq.randomname(sext=parsed.sext)
+
+    print(joek)
 
 
 if __name__ == '__main__':
