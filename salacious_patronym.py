@@ -188,23 +188,23 @@ def main(*args, **kwargs):
         help="Include a sexting emoji {}".format(Quotify.randomsextemoji()))
 
     parser.add_argument(
-        "-t", "--twitter", action='store_true',
+        "-t", "--tweet", action='store_true',
         help="Post the output to Twitter. Must supply consumer token and consumer secret, which are constants that come from the Twitter application itself, as well as an access token and access secret, which can be obtained through OAuth with --get-twitter-access. See tweepy documentation for more details.")
     parser.add_argument(
         "--get-twitter-access", action='store_true', dest="gettwaccess",
         help="Given the Twitter consumer token and secret, retrieve an access token and secret, which can be used to post. Return immediately without posting or printing a joke.")
     parser.add_argument(
-        "--consumertoken", default=getoptenv("TWITTER_CONSUMER_TOKEN"),
-        help="Consumer token for posting to Twitter, also settable via $TWITTER_CONSUMER_TOKEN")
+        "--consumertoken", default=getoptenv("SALACIOUSPATRONYM_CONSUMERTOKEN"),
+        help="Consumer token for posting to Twitter, also settable via $SALACIOUSPATRONYM_CONSUMERTOKEN")
     parser.add_argument(
-        "--consumersecret", default=getoptenv("TWITTER_CONSUMER_SECRET"),
-        help="Consumer secret for posting to Twitter, also settable via $TWITTER_CONSUMER_SECRET")
+        "--consumersecret", default=getoptenv("SALACIOUSPATRONYM_CONSUMERSECRET"),
+        help="Consumer secret for posting to Twitter, also settable via $SALACIOUSPATRONYM_CONSUMERSECRET")
     parser.add_argument(
-        "--accesstoken", default=getoptenv("TWITTER_ACCESS_TOKEN"),
-        help="Access token for posting to Twitter, also settable via $TWITTER_ACCESS_TOKEN")
+        "--accesstoken", default=getoptenv("SALACIOUSPATRONYM_ACCESSTOKEN"),
+        help="Access token for posting to Twitter, also settable via $SALACIOUSPATRONYM_ACCESSTOKEN")
     parser.add_argument(
-        "--accesssecret", default=getoptenv("TWITTER_ACCESS_SECRET"),
-        help="Access secret for posting to Twitter, also settable via $TWITTER_ACCESS_SECRET")
+        "--accesssecret", default=getoptenv("SALACIOUSPATRONYM_ACCESSSECRET"),
+        help="Access secret for posting to Twitter, also settable via $SALACIOUSPATRONYM_ACCESSSECRET")
 
     parser.add_argument(
         "string", nargs='?',
@@ -239,7 +239,7 @@ def main(*args, **kwargs):
     if not parsed.gettwaccess:
         print(joek)
 
-    if parsed.twitter or parsed.gettwaccess:
+    if parsed.tweet or parsed.gettwaccess:
         if not parsed.consumertoken or not parsed.consumersecret:
             raise Exception("Could not get twitter access: missing consumer token and/or consumer secret")
 
@@ -247,7 +247,7 @@ def main(*args, **kwargs):
         retrieve_auth_tokens(parsed.consumertoken, parsed.consumersecret)
         return
 
-    if parsed.twitter:
+    if parsed.tweet:
         if not parsed.accesstoken or not parsed.accesssecret:
             raise Exception("Could not get twitter access: missing access token and/or access secret")
         api = authenticate(parsed.consumertoken, parsed.consumersecret, parsed.accesstoken, parsed.accesssecret)
