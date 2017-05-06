@@ -169,7 +169,7 @@ def authenticate(consumertoken, consumersecret, accesstoken, accesssecret):
 
 def main(*args, **kwargs):
     parser = argparse.ArgumentParser(
-        description="A template for writing a new Python3 command line tool")
+        description="A childish joke that I've automated so now it can live on forever")
     parser.add_argument(
         "-d", "--debug", action='store_true',
         help="Include debugging output")
@@ -208,7 +208,7 @@ def main(*args, **kwargs):
 
     parser.add_argument(
         "string", nargs='?',
-        help="If provided, instead of getting a random name from the Pantheon, quotify the string")
+        help="If present, make the joke with the string; otherwise, get the name of a random famous person from the Pantheon and quotify that instead")
     parsed = parser.parse_args()
 
     if parsed.debug:

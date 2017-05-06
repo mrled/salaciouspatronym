@@ -46,11 +46,12 @@ I have some tests (ok fine, I have one test) that can be run with the built-in `
                                  [--accesssecret ACCESSSECRET]
                                  [string]
 
-    A template for writing a new Python3 command line tool
+    A childish joke that I've automated so now it can live on forever
 
     positional arguments:
-      string                If provided, instead of getting a random name from the
-                            Pantheon, quotify the string
+      string                If present, make the joke with the string; otherwise,
+                            get the name of a random famous person from the
+                            Pantheon and quotify that instead
 
     optional arguments:
       -h, --help            show this help message and exit
