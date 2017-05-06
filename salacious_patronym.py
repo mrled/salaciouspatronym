@@ -10,6 +10,7 @@ import sys
 import sqlite3
 import urllib.request
 
+import tweepy
 
 log = logging.getLogger(__name__)
 scriptdir = os.path.dirname(os.path.realpath(__file__))
@@ -20,6 +21,14 @@ scriptdir = os.path.dirname(os.path.realpath(__file__))
 
 def resolvepath(path):
     return os.path.realpath(os.path.normpath(os.path.expanduser(path)))
+
+
+def getoptenv(name):
+    """Return the value of an environment variable if it exists, or an empty string otherwise"""
+    try:
+        return os.environ[name]
+    except KeyError:
+        return ""
 
 
 # Implementation functions
@@ -138,7 +147,24 @@ class Pantheon:
         return result
 
 
-# Main handler
+def retrieve_auth_tokens(consumertoken, consumersecret):
+    auth = tweepy.OAuthHandler(consumertoken, consumersecret)
+    redirect_url = auth.get_authorization_url()
+    verifier = input(
+        "Go to <{}> in your browser, log in as the account you want to use for the bot, and paste the PIN here: ".format(
+            redirect_url))
+    auth.get_access_token(verifier)
+    print("\n".join([
+        "Authentication successful",
+        "    access token:  {}".format(auth.access_token),
+        "    access secret: {}".format(auth.access_token_secret)]))
+
+
+def authenticate(consumertoken, consumersecret, accesstoken, accesssecret):
+    auth = tweepy.OAuthHandler(consumertoken, consumersecret)
+    auth.set_access_token(accesstoken, accesssecret)
+    api = tweepy.API(auth)
+    return api
 
 
 def main(*args, **kwargs):
@@ -150,7 +176,7 @@ def main(*args, **kwargs):
     parser.add_argument(
         "-i", "--initialize",
         choices=['no', 'init', 'reinit'], default='no',
-        help="Initialization mode: assume initialized, initialized if not already, or drop-then-initialize")
+        help="Initialization mode: assume initialized, initialize if not already, or drop-then-initialize")
     parser.add_argument(
         "--pantheondb", default=os.path.join(scriptdir, "pantheon.sqlite"),
         help="Path to sqlite database containing Pantheon data (created if nonexistent)")
@@ -160,6 +186,26 @@ def main(*args, **kwargs):
     parser.add_argument(
         "--sext", action='store_true',
         help="Include a sexting emoji {}".format(Quotify.randomsextemoji()))
+
+    parser.add_argument(
+        "-t", "--twitter", action='store_true',
+        help="Post the output to Twitter. Must supply consumer token and consumer secret, which are constants that come from the Twitter application itself, as well as an access token and access secret, which can be obtained through OAuth with --get-twitter-access. See tweepy documentation for more details.")
+    parser.add_argument(
+        "--get-twitter-access", action='store_true', dest="gettwaccess",
+        help="Given the Twitter consumer token and secret, retrieve an access token and secret, which can be used to post. Return immediately without posting or printing a joke.")
+    parser.add_argument(
+        "--consumertoken", default=getoptenv("TWITTER_CONSUMER_TOKEN"),
+        help="Consumer token for posting to Twitter, also settable via $TWITTER_CONSUMER_TOKEN")
+    parser.add_argument(
+        "--consumersecret", default=getoptenv("TWITTER_CONSUMER_SECRET"),
+        help="Consumer secret for posting to Twitter, also settable via $TWITTER_CONSUMER_SECRET")
+    parser.add_argument(
+        "--accesstoken", default=getoptenv("TWITTER_ACCESS_TOKEN"),
+        help="Access token for posting to Twitter, also settable via $TWITTER_ACCESS_TOKEN")
+    parser.add_argument(
+        "--accesssecret", default=getoptenv("TWITTER_ACCESS_SECRET"),
+        help="Access secret for posting to Twitter, also settable via $TWITTER_ACCESS_SECRET")
+
     parser.add_argument(
         "string", nargs='?',
         help="If provided, instead of getting a random name from the Pantheon, quotify the string")
@@ -190,7 +236,22 @@ def main(*args, **kwargs):
         qq = Quotify(pantheon)
         joek = qq.randomname(sext=parsed.sext)
 
-    print(joek)
+    if not parsed.gettwaccess:
+        print(joek)
+
+    if parsed.twitter or parsed.gettwaccess:
+        if not parsed.consumertoken or not parsed.consumersecret:
+            raise Exception("Could not get twitter access: missing consumer token and/or consumer secret")
+
+    if parsed.gettwaccess:
+        retrieve_auth_tokens(parsed.consumertoken, parsed.consumersecret)
+        return
+
+    if parsed.twitter:
+        if not parsed.accesstoken or not parsed.accesssecret:
+            raise Exception("Could not get twitter access: missing access token and/or access secret")
+        api = authenticate(parsed.consumertoken, parsed.consumersecret, parsed.accesstoken, parsed.accesssecret)
+        api.update_status(joek)
 
 
 if __name__ == '__main__':
