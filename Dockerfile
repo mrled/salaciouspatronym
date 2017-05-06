@@ -37,6 +37,8 @@ RUN /bin/true \
     && su -l -c "/usr/bin/python3 /home/pat/salaciouspatronym/salacious_patronym.py --debug --initialize reinit > $LOGFILE" pat \
 
     # 1. Copy relevant env vars into /etc/environment, which is shared for all users
+    #    This file is NOT read automatically if you 'su - pat' in the container, but IS read automatically by cron (whatever)
+    #    If necessary you can dot-source it like '. /etc/environment'
     # 2. Had to truncate log file with '>' IN THE ENTRYPOINT TOO, or else 'tail -f' will not follow changes to it, idk why
     && echo "env | grep SALACIOUSPATRONYM_ > /etc/environment; crond -b; echo Initializing... > $LOGFILE; tail -f $LOGFILE" > /bin/entrypoint.sh \
     && chmod 755 /bin/entrypoint.sh \
