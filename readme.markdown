@@ -66,7 +66,7 @@ I have some tests (ok fine, I have one test) that can be run with the built-in `
                             Path to pantheon.tsv from
                             http://pantheon.media.mit.edu/about/datasets
       --sext                Include a sexting emoji ♋
-      -t, --twitter         Post the output to Twitter. Must supply consumer token
+      -t, --tweet           Post the output to Twitter. Must supply consumer token
                             and consumer secret, which are constants that come
                             from the Twitter application itself, as well as an
                             access token and access secret, which can be obtained
