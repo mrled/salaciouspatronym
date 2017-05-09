@@ -44,7 +44,7 @@ RUN /bin/true \
     && chmod 755 /bin/entrypoint.sh \
 
     # && echo "* * * * * echo \$SALACIOUSPATRONYM_CONSUMERTOKEN >> $LOGFILE" | crontab -u pat -
-    && echo "* */6 * * * /usr/bin/python3 /home/pat/salaciouspatronym/salacious_patronym.py --sext --tweet 2>&1 >> $LOGFILE" | crontab -u pat - \
+    && echo "1 */6 * * * /usr/bin/python3 /home/pat/salaciouspatronym/salacious_patronym.py --sext --tweet 2>&1 >> $LOGFILE" | crontab -u pat - \
 
     && /bin/true
 
