@@ -87,3 +87,9 @@ I have some tests (ok fine, I have one test) that can be run with the built-in `
       --accesssecret ACCESSSECRET
                             Access secret for posting to Twitter, also settable
                             via $TWITTER_ACCESS_SECRET
+
+## Docker concerns
+
+I run this in Docker
+
+When building the image on Windows, special care must be taken to avoid Windows line endings, which BusyBox's /bin/sh cannot handle. This is a problem because the default Git configuration on Windows is to convert any Unix line endings in the repo to Windows line endings on checkout, and then convert them back to Unix line endings on commit. To deal with this make sure that `core.autocrlf` is set to `false` for this repository.
