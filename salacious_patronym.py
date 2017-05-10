@@ -194,17 +194,20 @@ def main(*args, **kwargs):
         "--get-twitter-access", action='store_true', dest="gettwaccess",
         help="Given the Twitter consumer token and secret, retrieve an access token and secret, which can be used to post. Return immediately without posting or printing a joke.")
     parser.add_argument(
-        "--consumertoken", default=getoptenv("SALACIOUSPATRONYM_CONSUMERTOKEN"),
-        help="Consumer token for posting to Twitter, also settable via $SALACIOUSPATRONYM_CONSUMERTOKEN")
+        "--test-twitter-access", action='store_true', dest="testtwaccess",
+        help="Test whether the Twitter credentials work - exit zero if they work properly or nonzero if authentication fails")
     parser.add_argument(
-        "--consumersecret", default=getoptenv("SALACIOUSPATRONYM_CONSUMERSECRET"),
-        help="Consumer secret for posting to Twitter, also settable via $SALACIOUSPATRONYM_CONSUMERSECRET")
+        "--consumertoken", default=getoptenv("SALLYPAT_CONSUMERTOKEN"),
+        help="Consumer token for posting to Twitter, also settable via $SALLYPAT_CONSUMERTOKEN")
     parser.add_argument(
-        "--accesstoken", default=getoptenv("SALACIOUSPATRONYM_ACCESSTOKEN"),
-        help="Access token for posting to Twitter, also settable via $SALACIOUSPATRONYM_ACCESSTOKEN")
+        "--consumersecret", default=getoptenv("SALLYPAT_CONSUMERSECRET"),
+        help="Consumer secret for posting to Twitter, also settable via $SALLYPAT_CONSUMERSECRET")
     parser.add_argument(
-        "--accesssecret", default=getoptenv("SALACIOUSPATRONYM_ACCESSSECRET"),
-        help="Access secret for posting to Twitter, also settable via $SALACIOUSPATRONYM_ACCESSSECRET")
+        "--accesstoken", default=getoptenv("SALLYPAT_ACCESSTOKEN"),
+        help="Access token for posting to Twitter, also settable via $SALLYPAT_ACCESSTOKEN")
+    parser.add_argument(
+        "--accesssecret", default=getoptenv("SALLYPAT_ACCESSSECRET"),
+        help="Access secret for posting to Twitter, also settable via $SALLYPAT_ACCESSSECRET")
 
     parser.add_argument(
         "string", nargs='?',
@@ -235,6 +238,16 @@ def main(*args, **kwargs):
 
         qq = Quotify(pantheon)
         joek = qq.randomname(sext=parsed.sext)
+
+    if parsed.testtwaccess:
+        try:
+            api = authenticate(parsed.consumertoken, parsed.consumersecret, parsed.accesstoken, parsed.accesssecret)
+            api.home_timeline()
+            log.info("Twitter authentication successful")
+            return 0
+        except tweepy.error.TweepError as exc:
+            log.error("Twitter authentication failed: {}".format(exc))
+            return -1
 
     if not parsed.gettwaccess:
         print(joek)

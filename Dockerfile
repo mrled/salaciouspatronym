@@ -2,14 +2,17 @@ FROM alpine:latest
 LABEL maintainer "me@micahrl.com"
 
 # Intended to be set per environment
-ENV SALACIOUSPATRONYM_CONSUMERTOKEN   replaceme
-ENV SALACIOUSPATRONYM_CONSUMERSECRET  replaceme
-ENV SALACIOUSPATRONYM_ACCESSTOKEN     replaceme
-ENV SALACIOUSPATRONYM_ACCESSSECRET    replaceme
+ENV SALLYPAT_CONSUMERTOKEN   replaceme
+ENV SALLYPAT_CONSUMERSECRET  replaceme
+ENV SALLYPAT_ACCESSTOKEN     replaceme
+ENV SALLYPAT_ACCESSSECRET    replaceme
 
-# Intended to enhance readability of my RUN statements
-ENV LOGFILE /home/pat/salaciouspatronym.log
-ENV ZIPURL https://github.com/mrled/salaciouspatronym/archive/master.zip
+# Intended to enhance readability of my Dockerfile and scripts
+ENV SALLYPAT_USER sallypat
+ENV SALLYPAT_DIR /srv/salaciouspatronym
+ENV SALLYPAT_LOGFILE $SALLYPAT_DIR/salaciouspatronym.log
+ENV SALLYPAT_ZIPURL https://github.com/mrled/salaciouspatronym/archive/master.zip
+ENV SALLYPAT_ENTRY /bin/entrypoint.sh
 
 RUN /bin/true \
     && apk --no-cache upgrade && apk --no-cache add \
@@ -20,32 +23,48 @@ RUN /bin/true \
     && python3 -m pip install --upgrade pip \
     && python3 -m pip install \
         tweepy \
-    && addgroup -S pat \
-    && adduser -S -G pat -s /bin/sh pat \
+    && mkdir /etc/skel \
+    # Not sure why it isn't doing this by default?
+    # ('set -a' automatically exports *all* environment variables)
+    && echo "set -a && . /etc/profile && set +a" > /etc/skel/.profile \
+    && addgroup -S $SALLYPAT_USER \
+    && adduser -S -G $SALLYPAT_USER -s /bin/sh $SALLYPAT_USER \
     && /bin/true
 
 # NOTE: We do not use a USER statement, because crond (and therefore entrypoint.sh) must be run as root
 
-# For local dev, uncomment these two lines and comment the wget line below
-# COPY ["salacious_patronym.py", "/home/pat/salaciouspatronym/salacious_patronym.py"]
-# RUN chown -R pat:pat /home/pat/salaciouspatronym
+# For local dev, uncomment this section:
+COPY ["salacious_patronym.py", "$SALLYPAT_DIR/salacious_patronym.py"]
+RUN chown -R $SALLYPAT_USER:$SALLYPAT_USER $SALLYPAT_DIR
+
+# For prod, uncomment this section:
+# RUN /bin/true \
+#     && wget -q $ZIPURL -O /tmp/salaciouspatronym-master.zip \
+#     && unzip /tmp/salaciouspatronym-master.zip -d /tmp \
+#     # If we don't sleep here, the mv command fails sometimes, rolleyes emoji
+#     && sleep 1 \
+#     && mv /tmp/salaciouspatronym-master $SALLYPAT_DIR \
+#     && chown -R $SALLYPAT_USER:$SALLYPAT_USER $SALLYPAT_DIR \
+#     && /bin/true
 
 RUN /bin/true \
-    && su -l -c "wget -q $ZIPURL && unzip master.zip && sleep 1 && mv salaciouspatronym-master salaciouspatronym" pat \
 
-    # Initialize database, yes, but also initialize the logfile with correct permissions for 'pat' user
-    && su -l -c "/usr/bin/python3 /home/pat/salaciouspatronym/salacious_patronym.py --debug --initialize reinit > $LOGFILE" pat \
+    # Make all shells get the environment that is set in entrypoint.sh
+    && touch /etc/environment \
+    && echo ". /etc/environment" > /etc/profile.d/environment.sh \
 
-    # 1. Copy relevant env vars into /etc/environment, which is shared for all users
-    #    This file is NOT read automatically if you 'su - pat' in the container, but IS read automatically by cron (whatever)
-    #    If necessary you can dot-source it like '. /etc/environment'
-    # 2. Had to truncate log file with '>' IN THE ENTRYPOINT TOO, or else 'tail -f' will not follow changes to it, idk why
-    && echo "env | grep SALACIOUSPATRONYM_ > /etc/environment; crond -b; echo Initializing... > $LOGFILE; tail -f $LOGFILE" > /bin/entrypoint.sh \
-    && chmod 755 /bin/entrypoint.sh \
+    # Initialize database, yes, but also initialize the logfile with correct permissions for $SALLYPAT_USER
+    && su -l $SALLYPAT_USER -c \
+        "$SALLYPAT_DIR/salacious_patronym.py --debug --initialize reinit > $SALLYPAT_LOGFILE" \
 
-    # && echo "* * * * * echo \$SALACIOUSPATRONYM_CONSUMERTOKEN >> $LOGFILE" | crontab -u pat -
-    && echo "1 */6 * * * /usr/bin/python3 /home/pat/salaciouspatronym/salacious_patronym.py --sext --tweet 2>&1 >> $LOGFILE" | crontab -u pat - \
+    # && echo "* * * * * echo \$SALLYPAT_CONSUMERTOKEN >> $SALLYPAT_LOGFILE" | crontab -u $SALLYPAT_USER -
+    && echo "   0 */6 * * * $SALLYPAT_DIR/salacious_patronym.py --debug --sext --tweet 2>&1 >> $SALLYPAT_LOGFILE" | \
+        crontab -u $SALLYPAT_USER - \
+    && echo "*/15 *   * * * $SALLYPAT_DIR/salacious_patronym.py --debug --test-twitter-access 2>&1 >> $SALLYPAT_LOGFILE" | \
+        crontab -u $SALLYPAT_USER - \
 
     && /bin/true
+
+COPY ["entrypoint.sh", "/bin/"]
 
 CMD ["/bin/sh", "-c", "/bin/entrypoint.sh"]
