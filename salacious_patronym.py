@@ -12,7 +12,6 @@ import urllib.request
 
 import tweepy
 
-log = logging.getLogger(__name__)
 scriptdir = os.path.dirname(os.path.realpath(__file__))
 
 
@@ -105,6 +104,8 @@ class Pantheon:
         url = "https://en.wikipedia.org/w/api.php?action=query&prop=info&pageids={}&inprop=url&format=json".format(curid)
         apiresponse = urllib.request.urlopen(url).read()
         wikimd = json.loads(apiresponse.decode())
+        logging.debug("Wikipedia API response:\n{}".format(
+            json.dumps(wikimd, indent=2, sort_keys=True)))
         return wikimd['query']['pages'][str(curid)]['fullurl']
 
     @property
@@ -121,6 +122,7 @@ class Pantheon:
         with open(resolvepath(tsvpath), encoding='utf-8') as tsvfile:
             tsvreader = csv.reader(tsvfile, delimiter='\t')
             columns = None
+            ctr=0
             for row in tsvreader:
                 # SQL-escape quotes which might occur in nicknames
                 escapedrow = [x.replace('"', '""') for x in row]
@@ -136,6 +138,8 @@ class Pantheon:
                 else:
                     curse.execute("INSERT INTO {} VALUES ({})".format(
                         self.tablename, ", ".join(quotedrow)))
+                ctr += 1
+        logging.debug("Added {} deities to the pantheon database".format(ctr))
         self.connection.commit()
 
     def randomusa(self):
@@ -154,7 +158,7 @@ def retrieve_auth_tokens(consumertoken, consumersecret):
         "Go to <{}> in your browser, log in as the account you want to use for the bot, and paste the PIN here: ".format(
             redirect_url))
     auth.get_access_token(verifier)
-    print("\n".join([
+    logging.info("\n".join([
         "Authentication successful",
         "    access token:  {}".format(auth.access_token),
         "    access secret: {}".format(auth.access_token_secret)]))
@@ -168,6 +172,9 @@ def authenticate(consumertoken, consumersecret, accesstoken, accesssecret):
 
 
 def main(*args, **kwargs):
+
+    logging.basicConfig()
+
     parser = argparse.ArgumentParser(
         description="A childish joke that I've automated so now it can live on forever")
     parser.add_argument(
@@ -215,9 +222,7 @@ def main(*args, **kwargs):
     parsed = parser.parse_args()
 
     if parsed.debug:
-        log.setLevel(logging.DEBUG)
-    else:
-        log.setLevel(logging.INFO)
+        logging.root.setLevel(logging.DEBUG)
 
     if parsed.string:
         joek = Quotify.quotify(parsed.string, sext=parsed.sext)
@@ -243,26 +248,23 @@ def main(*args, **kwargs):
         try:
             api = authenticate(parsed.consumertoken, parsed.consumersecret, parsed.accesstoken, parsed.accesssecret)
             api.home_timeline()
-            log.info("Twitter authentication successful")
+            logging.info("Twitter authentication successful")
             return 0
         except tweepy.error.TweepError as exc:
-            log.error("Twitter authentication failed: {}".format(exc))
+            logging.error("Twitter authentication failed: {}".format(exc))
             return -1
 
-    if not parsed.gettwaccess:
-        print(joek)
-
-    if parsed.tweet or parsed.gettwaccess:
-        if not parsed.consumertoken or not parsed.consumersecret:
-            raise Exception("Could not get twitter access: missing consumer token and/or consumer secret")
+    if (parsed.tweet or parsed.gettwaccess) and not (parsed.consumertoken and parsed.consumersecret):
+        logging.error("Could not get twitter access: missing consumer token and/or consumer secret")
+        return -1
 
     if parsed.gettwaccess:
         retrieve_auth_tokens(parsed.consumertoken, parsed.consumersecret)
-        return
+        return 0
+
+    print(joek)
 
     if parsed.tweet:
-        if not parsed.accesstoken or not parsed.accesssecret:
-            raise Exception("Could not get twitter access: missing access token and/or access secret")
         api = authenticate(parsed.consumertoken, parsed.consumersecret, parsed.accesstoken, parsed.accesssecret)
         api.update_status(joek)
 
