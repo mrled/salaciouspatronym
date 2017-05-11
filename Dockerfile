@@ -7,12 +7,19 @@ ENV SALLYPAT_CONSUMERSECRET  replaceme
 ENV SALLYPAT_ACCESSTOKEN     replaceme
 ENV SALLYPAT_ACCESSSECRET    replaceme
 
+# Configure tweet frequency. Valid values are:
+# - once: Run crond, but do not schedule a tweet. Do tweet once when the container starts.
+# - 01min: Every minute (Twitter might not like this)
+# - 15min: Every 15 minutes (Twitter might not like this)
+# - 1hour: Every hour
+# - 6hour: Every 6 hours
+# - devel: Log a salacious patronym every *minute*, but do not tweet
+ENV SALLYPAT_FREQUENCY devel
+
 # Intended to enhance readability of my Dockerfile and scripts
 ENV SALLYPAT_USER sallypat
 ENV SALLYPAT_DIR /srv/salaciouspatronym
 ENV SALLYPAT_LOGFILE $SALLYPAT_DIR/salaciouspatronym.log
-ENV SALLYPAT_ZIPURL https://github.com/mrled/salaciouspatronym/archive/master.zip
-ENV SALLYPAT_ENTRY /bin/entrypoint.sh
 
 RUN /bin/true \
     && apk --no-cache upgrade && apk --no-cache add \
@@ -24,8 +31,7 @@ RUN /bin/true \
     && python3 -m pip install \
         tweepy \
     && mkdir /etc/skel \
-    # Not sure why it isn't doing this by default?
-    # ('set -a' automatically exports *all* environment variables)
+    # 'set -a' exports ALL env vars in these files, even if not prepended with 'export'
     && echo "set -a && . /etc/profile && set +a" > /etc/skel/.profile \
     && addgroup -S $SALLYPAT_USER \
     && adduser -S -G $SALLYPAT_USER -s /bin/sh $SALLYPAT_USER \
@@ -33,21 +39,11 @@ RUN /bin/true \
 
 # NOTE: We do not use a USER statement, because crond (and therefore entrypoint.sh) must be run as root
 
-# For local dev, uncomment this section:
 COPY ["salacious_patronym.py", "$SALLYPAT_DIR/salacious_patronym.py"]
-RUN chown -R $SALLYPAT_USER:$SALLYPAT_USER $SALLYPAT_DIR
-
-# For prod, uncomment this section:
-# RUN /bin/true \
-#     && wget -q $ZIPURL -O /tmp/salaciouspatronym-master.zip \
-#     && unzip /tmp/salaciouspatronym-master.zip -d /tmp \
-#     # If we don't sleep here, the mv command fails sometimes, rolleyes emoji
-#     && sleep 1 \
-#     && mv /tmp/salaciouspatronym-master $SALLYPAT_DIR \
-#     && chown -R $SALLYPAT_USER:$SALLYPAT_USER $SALLYPAT_DIR \
-#     && /bin/true
-
+COPY ["entrypoint.sh", "/bin/"]
 RUN /bin/true \
+
+    && chown -R $SALLYPAT_USER:$SALLYPAT_USER $SALLYPAT_DIR \
 
     # Make all shells get the environment that is set in entrypoint.sh
     && touch /etc/environment \
@@ -57,14 +53,6 @@ RUN /bin/true \
     && su -l $SALLYPAT_USER -c \
         "$SALLYPAT_DIR/salacious_patronym.py --debug --initialize reinit > $SALLYPAT_LOGFILE" \
 
-    # && echo "* * * * * echo \$SALLYPAT_CONSUMERTOKEN >> $SALLYPAT_LOGFILE" | crontab -u $SALLYPAT_USER -
-    && echo "   0 */6 * * * $SALLYPAT_DIR/salacious_patronym.py --debug --sext --tweet 2>&1 >> $SALLYPAT_LOGFILE" | \
-        crontab -u $SALLYPAT_USER - \
-    && echo "*/15 *   * * * $SALLYPAT_DIR/salacious_patronym.py --debug --test-twitter-access 2>&1 >> $SALLYPAT_LOGFILE" | \
-        crontab -u $SALLYPAT_USER - \
-
     && /bin/true
-
-COPY ["entrypoint.sh", "/bin/"]
 
 CMD ["/bin/sh", "-c", "/bin/entrypoint.sh"]

@@ -93,3 +93,19 @@ I have some tests (ok fine, I have one test) that can be run with the built-in `
 I run this in Docker
 
 When building the image on Windows, special care must be taken to avoid Windows line endings, which BusyBox's /bin/sh cannot handle. This is a problem because the default Git configuration on Windows is to convert any Unix line endings in the repo to Windows line endings on checkout, and then convert them back to Unix line endings on commit. To deal with this make sure that `core.autocrlf` is set to `false` for this repository.
+
+### Building for production
+
+Docker supports [pulling a Git repo and building its contents](https://docs.docker.com/engine/reference/commandline/build/#git-repositories):
+
+    docker build https://github.com/mrled/salaciouspatronym
+
+This builds the latest commit on the master branch, which (ideally) contains the latest working copy of the code, based on the Dockerfile in the root of the repo
+
+### Building during development
+
+To build during development, check out the code locally, change directory to the checkout location, and then tell Docker to build the current directory
+
+    docker build .
+
+This lets you make local changes and build a Docker image incorporating them for testing, before pushing to the master branch.
