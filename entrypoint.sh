@@ -3,7 +3,6 @@
 
 set -e
 set -u
-set -o pipefail
 
 echo "Salacious' \"Patronym\" eggplant emoji"
 
@@ -33,15 +32,15 @@ case "$SALLYPAT_FREQUENCY" in
         tweetonce=/bin/false
         ;;
     once)
-        # Do nothing: we will tweet once at the end of this script
+        # Do nothing and clear crontab; we tweet once at the end of this script
         crontab=""
         ;;
     *)
         echo "Unknown value for SALLYPAT_FREQUENCY variable '$SALLYPAT_FREQUENCY'"
-        exit -1
+        exit 1
         ;;
 esac
-echo "Setting crontab: "
+echo "Setting crontab:"
 echo "$crontab"
 echo "$crontab" | crontab -u $SALLYPAT_USER -
 
