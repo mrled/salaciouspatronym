@@ -23,7 +23,8 @@ def resolvepath(path):
 
 
 def getoptenv(name):
-    """Return the value of an environment variable if it exists, or an empty string otherwise"""
+    """Return the value of an environment variable if it exists, or an empty string otherwise
+    """
     try:
         return os.environ[name]
     except KeyError:
@@ -34,19 +35,27 @@ def getoptenv(name):
 
 
 class Quotify:
+    """A joke-making factory
+    """
 
     sextemoji = ['🍆', '💦', '🍑', '😏', '🤤', '🙈', '👉👌', '🍌', '♋']
 
     def __init__(self, pantheon):
+        """Initialize the joke-making factory
+
+        pantheon        An instance of the Pantheon class
+        """
         self.pantheon = pantheon
 
     @classmethod
-    def quotify(cls, string, sext=False, afterNewline=""):
+    def quotify(cls, string, sext=False, after_newline=""):
         """Make a morally bankrupt joke from an input string
+
         u see, the joke is that if you put something in quotes, it makes it sound dirty
-        string: The input string. Must have at least one space
-        sext: If if True, add a sext emoji like the eggplant
-        afterNewline: If passed, after making our morally bankrupt joke, append this argument as text
+
+        string          The input string. Must have at least one space
+        sext            If if True, add a sext emoji like the eggplant
+        after_newline   If passed, append this argument as text to our morally bankrupt joke
         """
         split = string.split(' ')
         output = ""
@@ -63,17 +72,21 @@ class Quotify:
         if sext:
             output += " {}".format(cls.randomsextemoji())
 
-        if afterNewline:
-            output = "{}\n{}".format(output, afterNewline)
+        if after_newline:
+            output = "{}\n{}".format(output, after_newline)
 
         return output
 
     @classmethod
     def randomsextemoji(cls):
+        """Retrieve a random sext emoji
+        """
         idx = random.randint(0, len(cls.sextemoji) -1)
         return cls.sextemoji[idx]
 
     def randomname(self, sext=False):
+        """Retrieve a random, but suitable-for-joke-making, Pantheon name
+        """
         suitable = False
         while not suitable:
             deity = self.pantheon.randomusa()
@@ -83,14 +96,21 @@ class Quotify:
         return self.quotify(
             deity['name'],
             sext=sext,
-            afterNewline=self.pantheon.geturl(deity['en_curid']))
+            after_newline=self.pantheon.geturl(deity['en_curid']))
 
 
 class Pantheon:
+    """A Pantheon database
+    """
 
     tsvuri = "http://pantheon.media.mit.edu/pantheon.tsv"
 
     def __init__(self, connection, tablename="pantheon"):
+        """Initialize the Pantheon database
+
+        connection      A database connection to the Pantheon database
+        tablename       The name of the table containing entries in the Pantheon
+        """
         self.connection = connection
         self.connection.row_factory = sqlite3.Row
         self.tablename = tablename
@@ -98,10 +118,15 @@ class Pantheon:
     @classmethod
     def geturl(cls, curid):
         """Get the Wikipedia URL from the curid
+
         - https://en.wikipedia.org/w/api.php?action=query&prop=info&pageids=[CURID]&inprop=url&format=json
-        - Could just do http://en.wikipedia.org/?curid=[CURID] however this won't redirect to a nice URL with the name
+        - Could just do http://en.wikipedia.org/?curid=[CURID], however,
+          this won't redirect to a nice URL with the name
+
+        curid       An identifier corresponding to the Wikipedia page for a Pantheon entry
         """
-        url = "https://en.wikipedia.org/w/api.php?action=query&prop=info&pageids={}&inprop=url&format=json".format(curid)
+        urltemplate = "https://en.wikipedia.org/w/api.php?action=query&prop=info&pageids={}&inprop=url&format=json"
+        url = urltemplate.format(curid)
         apiresponse = urllib.request.urlopen(url).read()
         wikimd = json.loads(apiresponse.decode())
         logging.debug("Wikipedia API response:\n{}".format(
@@ -110,6 +135,8 @@ class Pantheon:
 
     @property
     def initialized(self):
+        """Determine whether the database has been initialized
+        """
         curse = self.connection.cursor()
         curse.execute(
             "SELECT name FROM sqlite_master WHERE type='table' AND name='{}'".format(
@@ -117,7 +144,10 @@ class Pantheon:
         return bool(curse.fetchone())
 
     def loaddb(self, tsvpath):
-        """Load the database from the tsv"""
+        """Load the database from the tsv
+
+        tsvpath     The location of the Pantheon TSV file
+        """
         curse = self.connection.cursor()
         with open(resolvepath(tsvpath), encoding='utf-8') as tsvfile:
             tsvreader = csv.reader(tsvfile, delimiter='\t')
@@ -143,20 +173,29 @@ class Pantheon:
         self.connection.commit()
 
     def randomusa(self):
+        """Retrieve a random entry that was born in the US
+        """
         curse = self.connection.cursor()
         curse.execute(
-            "SELECT * FROM {} WHERE countryCode='US' ORDER BY RANDOM() LIMIT 1".format(self.tablename))
+            "SELECT * FROM ? WHERE countryCode='US' ORDER BY RANDOM() LIMIT 1",
+            (self.tablename, ))
         result = curse.fetchone()
         curse.close()
         return result
 
 
-def retrieve_auth_tokens(consumertoken, consumersecret):
+def log_auth_tokens(consumertoken, consumersecret):
+    """Retrieve and log Twitter authentication tokens
+
+    consumertoken       A Twitter consumer token
+    consumersecret      A Twitter consumer secret
+    """
     auth = tweepy.OAuthHandler(consumertoken, consumersecret)
     redirect_url = auth.get_authorization_url()
-    verifier = input(
-        "Go to <{}> in your browser, log in as the account you want to use for the bot, and paste the PIN here: ".format(
-            redirect_url))
+    verifier = input(' '.join([
+        "Go to <{}> in your browser,".format(redirect_url),
+        "log in as the account you want to use for the bot,",
+        "and paste the PIN here: "]))
     auth.get_access_token(verifier)
     logging.info("\n".join([
         "Authentication successful",
@@ -165,16 +204,22 @@ def retrieve_auth_tokens(consumertoken, consumersecret):
 
 
 def authenticate(consumertoken, consumersecret, accesstoken, accesssecret):
+    """Retrieve an authenticated tweepy.API instance
+
+    consumertoken       A Twitter consumer token
+    consumersecret      A Twitter consumer secret
+    accesstoken         A Twitter access token
+    accesssecret        A Twitter access secret
+    """
     auth = tweepy.OAuthHandler(consumertoken, consumersecret)
     auth.set_access_token(accesstoken, accesssecret)
     api = tweepy.API(auth)
     return api
 
 
-def main(*args, **kwargs):
-
-    logging.basicConfig()
-
+def parseargs(*args, **kwargs):
+    """Parse command-line arguments
+    """
     parser = argparse.ArgumentParser(
         description="A childish joke that I've automated so now it can live on forever")
     parser.add_argument(
@@ -183,7 +228,9 @@ def main(*args, **kwargs):
     parser.add_argument(
         "-i", "--initialize",
         choices=['no', 'init', 'reinit'], default='no',
-        help="Initialization mode: assume initialized, initialize if not already, or drop-then-initialize")
+        help=(
+            "Initialization mode: assume initialized, "
+            "initialize if not already, or drop-then-initialize"))
     parser.add_argument(
         "--pantheondb", default=os.path.join(scriptdir, "pantheon.sqlite"),
         help="Path to sqlite database containing Pantheon data (created if nonexistent)")
@@ -192,17 +239,26 @@ def main(*args, **kwargs):
         help="Path to pantheon.tsv from http://pantheon.media.mit.edu/about/datasets")
     parser.add_argument(
         "--sext", action='store_true',
-        help="Include a sexting emoji {}".format(Quotify.randomsextemoji()))
+        help="Append a sexting emoji (one of {})".format(', '.join(Quotify.sextemoji)))
 
     parser.add_argument(
         "-t", "--tweet", action='store_true',
-        help="Post the output to Twitter. Must supply consumer token and consumer secret, which are constants that come from the Twitter application itself, as well as an access token and access secret, which can be obtained through OAuth with --get-twitter-access. See tweepy documentation for more details.")
+        help=(
+            "Post the output to Twitter. Must supply consumer token and consumer secret, "
+            "which are constants that come from the Twitter application itself, "
+            "as well as an access token and access secret, "
+            "which can be obtained through OAuth with --get-twitter-access. "
+            "See tweepy documentation for more details."))
     parser.add_argument(
         "--get-twitter-access", action='store_true', dest="gettwaccess",
-        help="Given the Twitter consumer token and secret, retrieve an access token and secret, which can be used to post. Return immediately without posting or printing a joke.")
+        help=(
+            "Given the Twitter consumer token and secret, retrieve an access token and secret, "
+            "which can be used to post. Return immediately without posting or printing a joke."))
     parser.add_argument(
         "--test-twitter-access", action='store_true', dest="testtwaccess",
-        help="Test whether the Twitter credentials work - exit zero if they work properly or nonzero if authentication fails")
+        help=(
+            "Test whether the Twitter credentials work - "
+            "exit zero if they work properly or nonzero if authentication fails"))
     parser.add_argument(
         "--consumertoken", default=getoptenv("SALLYPAT_CONSUMERTOKEN"),
         help="Consumer token for posting to Twitter, also settable via $SALLYPAT_CONSUMERTOKEN")
@@ -218,8 +274,21 @@ def main(*args, **kwargs):
 
     parser.add_argument(
         "string", nargs='?',
-        help="If present, make the joke with the string; otherwise, get the name of a random famous person from the Pantheon and quotify that instead")
-    parsed = parser.parse_args()
+        help=(
+            "If present, make the joke with the string; "
+            "otherwise, get the name of a random famous person from the Pantheon "
+            "and quotify that instead"))
+
+    parsed = parser.parse_args(*args, **kwargs)
+
+    return parsed
+
+
+def main(*args, **kwargs):
+    """Entrypoint for command-line use
+    """
+    logging.basicConfig()
+    parsed = parseargs(*args, **kwargs)
 
     if parsed.debug:
         logging.root.setLevel(logging.DEBUG)
@@ -246,7 +315,9 @@ def main(*args, **kwargs):
 
     if parsed.testtwaccess:
         try:
-            api = authenticate(parsed.consumertoken, parsed.consumersecret, parsed.accesstoken, parsed.accesssecret)
+            api = authenticate(
+                parsed.consumertoken, parsed.consumersecret, parsed.accesstoken,
+                parsed.accesssecret)
             api.home_timeline()
             logging.info("Twitter authentication successful")
             return 0
@@ -254,18 +325,21 @@ def main(*args, **kwargs):
             logging.error("Twitter authentication failed: {}".format(exc))
             return -1
 
-    if (parsed.tweet or parsed.gettwaccess) and not (parsed.consumertoken and parsed.consumersecret):
-        logging.error("Could not get twitter access: missing consumer token and/or consumer secret")
-        return -1
+    if parsed.tweet or parsed.gettwaccess:
+        if not parsed.consumertoken or not parsed.consumersecret:
+            logging.error(
+                "Could not get twitter access: missing consumer token and/or consumer secret")
+            return -1
 
     if parsed.gettwaccess:
-        retrieve_auth_tokens(parsed.consumertoken, parsed.consumersecret)
+        log_auth_tokens(parsed.consumertoken, parsed.consumersecret)
         return 0
 
     print(joek)
 
     if parsed.tweet:
-        api = authenticate(parsed.consumertoken, parsed.consumersecret, parsed.accesstoken, parsed.accesssecret)
+        api = authenticate(
+            parsed.consumertoken, parsed.consumersecret, parsed.accesstoken, parsed.accesssecret)
         api.update_status(joek)
 
 
