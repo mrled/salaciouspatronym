@@ -109,3 +109,30 @@ To build during development, check out the code locally, change directory to the
     docker build .
 
 This lets you make local changes and build a Docker image incorporating them for testing, before pushing to the master branch.
+
+## AWS Lambda concerns
+
+I have recently moved from running in Docker to running as an AWS Lambda function.
+
+### Deploying to Lambda
+
+This is how we deploy to Lambda
+
+Note that we update the zip file inside a Docker container.
+We do this because AWS Lambda functions run on x86_64 Linux VMs under the hood.
+If any prerequisite requires compilation,
+the resulting binaries must be Linux binaries for the x86_64 architecture.
+
+    # Create the Lambda deployment directory
+    mkdir lambda
+
+    # Get the Python prereqs and save them to a zipfile
+    docker run --rm --interactive --tty \
+        --volume "$PWD:/srv/sallypat" \
+        alpine:latest \
+        /bin/sh -c \
+            "apk update && apk add python3 && python3 -m pip install -U pip && python3 -m pip install tweepy -t /newlambda && cd /newlambda && zip -r /srv/sallypat/newlambda.zip ."
+
+1.  Update the code or whatever
+
+2.  Create the lambda

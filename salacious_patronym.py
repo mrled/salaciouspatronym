@@ -284,6 +284,34 @@ def parseargs(*args, **kwargs):
     return parsed
 
 
+def aws_lambda_handler(event, context):
+    """Entrypoint for AWS Lambda use
+
+    Assumptions
+    - The Pantheon sqlite database has already been initialized
+    - A sexting emoji is always appended
+    """
+    logging.basicConfig()
+    logging.debug("AWS Lambda event handler fired; event is '{}'; context is '{}'".format(
+        event, context))
+
+    parsed = parseargs()
+    connection = sqlite3.connect(parsed.pantheondb)
+    pantheon = Pantheon(connection)
+    qq = Quotify(pantheon)
+
+    if event:
+        if 'source' in event and event['source'] == 'aws.events':
+            joek = qq.randomname(sext=True)
+            logging.info("Wrote a very original joek: {}".format(joek))
+            api = authenticate(parsed.consumertoken, parsed.consumersecret, parsed.accesstoken, parsed.accesssecret)
+            api.update_status(joek)
+        else:
+            raise Exception("Passed an event but it was not from a source we understand")
+    else:
+        raise Exception("No event passed")
+
+
 def main(*args, **kwargs):
     """Entrypoint for command-line use
     """
