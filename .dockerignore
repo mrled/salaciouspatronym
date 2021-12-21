@@ -1,0 +1,11 @@
+*.egg-info
+.dockerignore
+.git
+.gitignore
+__pycache__
+Dockerfile
+env.txt
+salaciouspatronym.egg-info
+scripts/
+venv
+vendor/

@@ -1,4 +1,5 @@
-pantheon.sqlite
-pantheon.tsv
+*.egg-info
 __pycache__
+env.txt
+pantheon.sqlite
 venv
