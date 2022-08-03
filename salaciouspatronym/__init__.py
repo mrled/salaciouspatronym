@@ -17,7 +17,8 @@ from salaciouspatronym.applogger import AppLogger
 class Quotify:
     """A joke-making factory"""
 
-    sextemoji = ["🍆", "💦", "🍑", "😏", "🤤", "🙈", "👉👌", "🍌", "♋"]
+    # sextemoji = ["🍆", "💦", "🍑", "😏", "🤤", "🙈", "👉👌", "🍌", "♋"]
+    sextemoji = ["🍆", "💦", "🍑", "😏", "🤤", "👉👌", "♋", "😳"]
 
     def __init__(self, pantheon):
         """Initialize the joke-making factory
